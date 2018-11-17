@@ -1,0 +1,7 @@
+language: scala
+scala:
+  - "2.12.7"
+jdk:
+  - oraclejdk8
+
+script: sbt -no-colors ++$TRAVIS_SCALA_VERSION clean test
