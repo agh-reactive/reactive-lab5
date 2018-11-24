@@ -26,8 +26,9 @@ class ProductCatalogRemoteTest extends AsyncFlatSpec with Matchers {
     for {
       productCatalogActorRef <- productCatalog.resolveOne()
       items                  <- (productCatalogActorRef ? query).mapTo[ProductCatalog.Items]
+      _                      <- actorSystem.terminate()
+      _                      <- anotherActorSystem.terminate()
     } yield {
-      println(items)
       assert(items.items.size == 10)
     }
   }
