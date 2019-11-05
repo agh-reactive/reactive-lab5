@@ -7,6 +7,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
+import scala.language.postfixOps
 
 
 ////////////////////////////////////////
@@ -88,9 +89,4 @@ object BankApp extends App {
 
   Await.result(serversystem.whenTerminated, Duration.Inf)
   Await.result(clientsystem.whenTerminated, Duration.Inf)
-
-
-  
-
-  
 }

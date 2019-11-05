@@ -1,7 +1,12 @@
-language: scala
-scala:
-  - "2.12.7"
-jdk:
-  - oraclejdk8
+image: hseeberger/scala-sbt:8u222_1.3.2_2.13.1
 
-script: sbt -no-colors ++$TRAVIS_SCALA_VERSION clean test
+variables:
+  SBT_VERSION: "1.3.2"
+
+stages:
+  - test
+
+test:
+  stage: test
+  script:
+    - sbt clean test
