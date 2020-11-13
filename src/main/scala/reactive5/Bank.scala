@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 import akka.pattern.ask
 import akka.util.Timeout
 import scala.language.postfixOps
-
+import akka.actor.SupervisorStrategy.Restart
 
 ////////////////////////////////////////
 // Bank account example with remoting //
@@ -40,7 +40,7 @@ class BankAccount extends Actor {
       balance -= amount
       println(s"Current balance: $balance")
       sender ! Done
-    case Done => 
+    case Done =>
       context.system.terminate()
   }
 }
@@ -54,37 +54,42 @@ class Client extends Actor {
   import Client._
   import BankAccount.Deposit
   import BankAccount.Withdraw
-  
-   def receive = LoggingReceive {
+
+  def receive = LoggingReceive { 
     case Init =>
       // use remote account
-      val account = context.actorSelection("akka.tcp://Reactive5@127.0.0.1:2552/user/account")
-      implicit val timeout = Timeout(5 seconds)
+      // this actorSelection does not validate if the given actor really exists
+      // use account.resolveOne() to validate
+      val account =
+        context.actorSelection("akka.tcp://Reactive5@127.0.0.1:2552/user/account")
 
-      // use ask pattern 
-      val future = account ? Deposit(100)
+      // use ask pattern
+      implicit val timeout = Timeout(5 seconds)
+      val future = account ? Deposit(200)
+      // for demonstration only, one should not block in actor
       val result = Await.result(future, timeout.duration)
-      
+
       sender ! Done
   }
 }
 
 object BankApp extends App {
   val config = ConfigFactory.load()
-  val serversystem = ActorSystem("Reactive5", config.getConfig("serverapp").withFallback(config))
+  val serversystem =
+    ActorSystem("Reactive5", config.getConfig("serverapp").withFallback(config))
   val account = serversystem.actorOf(Props[BankAccount], "account")
 
-  val clientsystem = ActorSystem("Reactive5", config.getConfig("clientapp").withFallback(config))
+  val clientsystem =
+    ActorSystem("Reactive5", config.getConfig("clientapp").withFallback(config))
   val client = clientsystem.actorOf(Props[Client], "client")
-  
-  
-  // use ask pattern 
+
+  // use ask pattern
   implicit val timeout = Timeout(5 seconds)
   val future = client ? Client.Init
   val result = Await.result(future, timeout.duration)
-  
+
   account ! BankAccount.Done
-  
+
   clientsystem.terminate()
 
   Await.result(serversystem.whenTerminated, Duration.Inf)
