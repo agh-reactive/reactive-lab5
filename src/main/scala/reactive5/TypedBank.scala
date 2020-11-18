@@ -111,7 +111,7 @@ object TypedClient {
 }
 
 object TypedBankApp extends App {
-  val config = ConfigFactory.load().getConfig("cluster-conf")
+  val config = ConfigFactory.load().getConfig("typed-bank-cluster-conf")
   val remoteBankAccount =
     ActorSystem(
       TypedBankAccount(0),
