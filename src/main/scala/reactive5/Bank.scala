@@ -1,97 +1,140 @@
 package reactive5
 
-import akka.actor._
-import akka.event.LoggingReceive
-import com.typesafe.config._
+import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
+import akka.actor.typed.scaladsl.Behaviors
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import akka.pattern.ask
-import akka.util.Timeout
-import scala.language.postfixOps
-import akka.actor.SupervisorStrategy.Restart
+import akka.pattern.StatusReply
+import akka.Done
+import com.typesafe.config.ConfigFactory
+import reactive5.Client.Init
+import scala.util.Failure
+import scala.util.Success
+import akka.actor.typed.receptionist.ServiceKey
+import akka.actor.typed.receptionist.Receptionist
+import akka.cluster.typed.Cluster
+import akka.actor.typed.pubsub.Topic.Subscribe
 
-////////////////////////////////////////
-// Bank account example with remoting //
-////////////////////////////////////////
-
-// Good practice: defining messages as case classes in an Actor's companion object
 object BankAccount {
-  case class Deposit(amount: BigInt) {
+  val BankAccountServiceKey = ServiceKey[Command]("accountService")
+  trait Command {
+    def replyTo: ActorRef[Response]
+  }
+  case class Deposit(amount: BigInt, replyTo: ActorRef[Response])
+      extends Command {
     require(amount > 0)
   }
-  case class Withdraw(amount: BigInt) {
+  case class Withdraw(amount: BigInt, replyTo: ActorRef[Response])
+      extends Command {
     require(amount > 0)
   }
-  case object Done
-  case object Init
-}
 
-class BankAccount extends Actor {
-  import BankAccount._
+  trait Response
+  case object Done extends Response
+  case object Failed extends Response
 
-  var balance = BigInt(0)
-
-  def receive = LoggingReceive {
-    case Deposit(amount) =>
-      balance += amount
-      println(s"Current balance: $balance")
-      sender ! Done
-    case Withdraw(amount) if amount <= balance =>
-      balance -= amount
-      println(s"Current balance: $balance")
-      sender ! Done
-    case Done =>
-      context.system.terminate()
+  def apply(balance: BigInt): Behavior[Command] = Behaviors.setup { context =>
+    context.system.receptionist ! Receptionist.register(
+      BankAccountServiceKey,
+      context.self
+    )
+    Behaviors.receiveMessage {
+      case Deposit(amount, replyTo) =>
+        replyTo ! Done
+        apply(balance + amount)
+      case Withdraw(amount, replyTo) if amount <= balance =>
+        replyTo ! Done
+        apply(balance - amount)
+      case c: Command =>
+        c.replyTo ! Failed
+        Behaviors.same
+    }
   }
 }
 
 object Client {
-  case object Init
-  case object Done
-}
+  trait Command
+  case class Init(replyTo: ActorRef[StatusReply[Done]]) extends Command
+  private case class BankAccountResponse(response: BankAccount.Response)
+      extends Command
+  private case class ListingResponse(listing: Receptionist.Listing)
+      extends Command
 
-class Client extends Actor {
-  import Client._
-  import BankAccount.Deposit
-  import BankAccount.Withdraw
+  def apply(): Behavior[Command] = Behaviors.setup { context =>
+    context.log.info(s"Starting up ${context.self}")
+    val listingResponseAdapter =
+      context.messageAdapter[Receptionist.Listing](ListingResponse)
+    Behaviors.receiveMessage { case Init(replyTo) =>
+      // find registered BankAccount actor
+      context.system.receptionist ! Receptionist.Find(
+        BankAccount.BankAccountServiceKey,
+        listingResponseAdapter
+      )
+      context.log.info("Received init")
+      findingBankActor(replyTo)
+    }
+  }
 
-  def receive = LoggingReceive { 
-    case Init =>
-      // use remote account
-      // this actorSelection does not validate if the given actor really exists
-      // use account.resolveOne() to validate
-      val account =
-        context.actorSelection("akka.tcp://Reactive5@127.0.0.1:2552/user/account")
+  def findingBankActor(
+      replyTo: ActorRef[StatusReply[Done]]
+  ): Behavior[Command] = Behaviors.setup { context =>
+    val bankAccountResponseAdapter =
+      context.messageAdapter[BankAccount.Response](BankAccountResponse)
+    Behaviors.receiveMessage {
+      case ListingResponse(
+            BankAccount.BankAccountServiceKey.Listing(listings)
+          ) =>
+        listings.foreach( // should be only one such actor
+          _ ! BankAccount.Deposit(200, bankAccountResponseAdapter)
+        )
+        context.log.info(s"BankActor was found $listings")
+        awaitForBankAccountResponse(replyTo)
+    }
+  }
 
-      // use ask pattern
-      implicit val timeout = Timeout(5 seconds)
-      val future = account ? Deposit(200)
-      // for demonstration only, one should not block in actor
-      val result = Await.result(future, timeout.duration)
-
-      sender ! Done
+  def awaitForBankAccountResponse(
+      replyTo: ActorRef[StatusReply[Done]]
+  ): Behavior[Command] = Behaviors.setup { context =>
+    Behaviors.receiveMessage {
+      case BankAccountResponse(BankAccount.Done) =>
+        context.log.info(s"Received the success from BankAccount")
+        replyTo ! StatusReply.Ack
+        apply()
+      case BankAccountResponse(BankAccount.Failed) =>
+        context.log.info(s"Received the failure from BankAccount")
+        replyTo ! StatusReply.error("Bank operation has failed")
+        apply()
+    }
   }
 }
 
 object BankApp extends App {
   val config = ConfigFactory.load()
-  val serversystem =
-    ActorSystem("Reactive5", config.getConfig("serverapp").withFallback(config))
-  val account = serversystem.actorOf(Props[BankAccount], "account")
+  val remoteBankAccount =
+    ActorSystem(
+      BankAccount(0),
+      "Reactive5",
+      config.getConfig("serverapp").withFallback(config)
+    )
 
-  val clientsystem =
-    ActorSystem("Reactive5", config.getConfig("clientapp").withFallback(config))
-  val client = clientsystem.actorOf(Props[Client], "client")
+  // can be spawned on separate node
+  val remoteClient = ActorSystem(
+    Client(),
+    "Reactive5",
+    config.getConfig("clientapp").withFallback(config)
+  )
 
-  // use ask pattern
-  implicit val timeout = Timeout(5 seconds)
-  val future = client ? Client.Init
-  val result = Await.result(future, timeout.duration)
+  import akka.actor.typed.scaladsl.AskPattern._
 
-  account ! BankAccount.Done
+  Thread.sleep(10000) // wait for the cluster to form itself
 
-  clientsystem.terminate()
+  remoteClient
+    .askWithStatus[Done](Init)(10.seconds, remoteClient.scheduler)
+    .onComplete {
+      case Failure(exception) => exception.printStackTrace(); println("Failure")
+      case Success(value)     => println("Success")
+    }(scala.concurrent.ExecutionContext.global)
 
-  Await.result(serversystem.whenTerminated, Duration.Inf)
-  Await.result(clientsystem.whenTerminated, Duration.Inf)
+  Await.result(remoteBankAccount.whenTerminated, Duration.Inf)
 }
