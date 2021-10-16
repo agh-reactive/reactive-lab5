@@ -17,6 +17,7 @@ import akka.cluster.typed.Cluster
 import akka.actor.typed.pubsub.Topic.Subscribe
 
 object BankAccount {
+  // potentially you can register multiple actors under one ServiceKey
   val BankAccountServiceKey = ServiceKey[Command]("accountService")
   trait Command {
     def replyTo: ActorRef[Response]
@@ -109,6 +110,9 @@ object Client {
   }
 }
 
+/** Small demonstration of Akka recepcionist patter based on Akka Cluster
+  * see: https://doc.akka.io/docs/akka/current/typed/actor-discovery.html
+  */
 object BankApp extends App {
   val config = ConfigFactory.load()
   val remoteBankAccount =
