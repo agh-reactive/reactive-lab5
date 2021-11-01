@@ -21,7 +21,7 @@
 * Client is an actor which makes a request and then pipes the HTTP request result to itself
 
 
-## Homework
+## Assignment
 
 The template for Lab 5: https://github.com/agh-reactive/reactive-scala-labs-templates/tree/lab-5 
 * **be sure that your local lab-5 branch is up to date with remote one**
