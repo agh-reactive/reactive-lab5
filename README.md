@@ -1,4 +1,4 @@
-# reactive-lab5 - Handling failures, Akka Actor Discovery with Akka Cluster and Akka HTTP
+# Lab 5 - Handling failures, Akka Actor Discovery with Akka Cluster and Akka HTTP
 
 ## Handling actor errors
 
