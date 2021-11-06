@@ -1,4 +1,4 @@
-# reactive-lab5 - Handling failures, Akka Actor Discovery with Akka Cluster and Akka HTTP
+# Lab 5 - Handling failures, Akka Actor Discovery with Akka Cluster and Akka HTTP
 
 ## Handling actor errors
 
@@ -9,7 +9,7 @@
 ## Sending messages to actors on a different machine
 
 * [Akka Location Transparency](https://doc.akka.io//docs/akka/current/general/remoting.html#remoting) 
-* [Akka Actor Discovery](https://doc.akka.io/docs/akka/current/typed/actor-discovery.html) can be implemented with [receptionist pattern](https://doc.akka.io/docs/akka/current/typed/actor-discovery.html#receptionist). Check [Bank.scala](src/main/scala/reactive5/Bank.scala) to see the example.
+* [Akka Actor Discovery](https://doc.akka.io/docs/akka/current/typed/actor-discovery.html) can be implemented with the [receptionist pattern](https://doc.akka.io/docs/akka/current/typed/actor-discovery.html#receptionist). See [Bank.scala](src/main/scala/reactive5/Bank.scala) for an example.
 * **Note** In Akka Typed, there is no way to contact actors on a different machine with actors' paths (support was dropped as it is usually a bad idea to contact actors directly via the path). You can communicate between machines transparently using Akka Cluster capabilities.
 * Cluster settings can be found in [application.conf](src/main/resources/application.conf)
 
@@ -18,18 +18,22 @@
 * For HTTP communication (both server and client) the [Akka HTTP](https://doc.akka.io/docs/akka-http/current/index.html?language=scala) library can be used.
 * Take a look and try to run [HttpServer](src/main/scala/reactive5/HttpServer.scala) and then [HttpClient](src/main/scala/reactive5/HttpClient.scala)
 * Server uses high level DSL to compose HTTP route, [see](https://doc.akka.io/docs/akka-http/current/routing-dsl/index.html?language=scala#minimal-example)
+<<<<<<< HEAD
 * Client is an actor which makes a request and then pipes the HTTP request result to itself.
+=======
+* Client is an actor which makes a request and then pipes the HTTP response to itself
+>>>>>>> master
 
 
-## Homework
+## Assignment
 
 The template for Lab 5: https://github.com/agh-reactive/reactive-scala-labs-templates/tree/lab-5 
 * **be sure that your local lab-5 branch is up to date with remote one**
 * **remember about merging solution from lab-4 into this branch**
 
-In the template, `ProductCatalog` and the example of communication from different ActorSystem with `ProductCatalog` using [recepcionist pattern](https://doc.akka.io/docs/akka/current/typed/actor-discovery.html#receptionist) with cluster setup is implemented. Product catalog has several responsibilities:
-* storing `Item`s, accordingly to lab4 convention (id as URI), and with number of items in the warehouse;
-* finding items accordingly to key words.
+In the template, [`ProductCatalog`](https://github.com/agh-reactive/reactive-scala-labs-templates/blob/lab-5/src/main/scala/EShop/lab5/ProductCatalogApp.scala) has been implemented. An example of communication with `ProductCatalog` from a different `ActorSystem` using the [receptionist pattern](https://doc.akka.io/docs/akka/current/typed/actor-discovery.html#receptionist) with cluster setup is implemented in [ProductCatalogRemoteTest.scala](https://github.com/agh-reactive/reactive-scala-labs-templates/blob/lab-5/src/test/scala/EShop/lab5/ProductCatalogRemoteTest.scala). Product catalog has several responsibilities:
+* storing `Item`s, accordingly to lab4 convention (id as URI), and with number of items in the warehouse
+* searching for items by keywords
     * Example of products: 
 
     | name | brand  |
@@ -43,14 +47,15 @@ In the template, `ProductCatalog` and the example of communication from differen
     * As a result, 10 closest results are returned.
     * Data is imported from `query_result.bz2` file committed into template resources (data is loaded into memory, so `ProductCatalog` is memory intensive).
 
-1. *(15 points)* Please create Rest API for `ProductCatalog` exposing search feature. Results should be returned as JSON. Run `ProductCatalog` on different than HTTP server node (to demonstrate akka cluster capabilities and communication via receptionist pattern). While implementing Akka HTTP server, please take a look at `HelloWorldAkkaHttpServer` example in templates.
+
+1. *(15 points)* Please create Rest API for `ProductCatalog` exposing search feature. Results should be returned as JSON. Run `ProductCatalog` on an actor system different than HTTP server (to demonstrate remote communication via the receptionist pattern). While implementing Akka HTTP server, please take a look at `HelloWorldAkkaHttpServer` example in templates.
 
 ![Product Catalog HTTP Server architecture](product_catalog_http.drawio.svg)
 
-2. *(10 points)* Impelement `Payment` actor to integrate various payments methods (e.g. VISA, PayU, PayPal) via HTTP communication - use `PaymentService` template for direct HTTP calls. The payment server `PaymentServiceServer` is implemented for you - please run it before testing. Use separate `PaymentService` actor for each payment request.
+2. *(10 points)* Implement the `Payment` actor that communicates with external payments services via HTTP (e.g. VISA, PayU, PayPal) - use the `PaymentService`. The payment server `PaymentServiceServer` is implemented for you - please start it before testing. Use a separate `PaymentService` actor for each payment request.
 
 ![Payment architecture](payment_architecture.drawio.svg)
 
-3. *(15 points)* Add proper payment error handling. Use strategy [supervising](https://doc.akka.io/docs/akka/current/typed/fault-tolerance.html) for Server possibly temporary errors, [watch](https://doc.akka.io/docs/akka/current/typed/actor-lifecycle.html#watching-actors) actor for unrecoverable errors and notify external actors about the payment rejection, [see](https://manuel.bernhardt.io/2019/09/05/tour-of-akka-typed-supervision-and-signals/).
+3. *(15 points)* Add proper payment error handling. Use strategy [supervising](https://doc.akka.io/docs/akka/current/typed/fault-tolerance.html) for Server transient errors, [watch](https://doc.akka.io/docs/akka/current/typed/actor-lifecycle.html#watching-actors) actor for unrecoverable errors and notifying external actors about the payment rejection. [See this](https://manuel.bernhardt.io/2019/09/05/tour-of-akka-typed-supervision-and-signals).
 
 ![Payment architecture supervision](payment_architecture_supervision.drawio.svg)
