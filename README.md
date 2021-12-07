@@ -18,11 +18,7 @@
 * For HTTP communication (both server and client) the [Akka HTTP](https://doc.akka.io/docs/akka-http/current/index.html?language=scala) library can be used.
 * Take a look and try to run [HttpServer](src/main/scala/reactive5/HttpServer.scala) and then [HttpClient](src/main/scala/reactive5/HttpClient.scala)
 * Server uses high level DSL to compose HTTP route, [see](https://doc.akka.io/docs/akka-http/current/routing-dsl/index.html?language=scala#minimal-example)
-<<<<<<< HEAD
-* Client is an actor which makes a request and then pipes the HTTP request result to itself.
-=======
 * Client is an actor which makes a request and then pipes the HTTP response to itself
->>>>>>> master
 
 
 ## Assignment
