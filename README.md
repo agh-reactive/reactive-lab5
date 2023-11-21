@@ -28,7 +28,7 @@ The template for Lab 5: https://github.com/agh-reactive/reactive-scala-labs-temp
 * **remember about merging solution from lab-4 into this branch**
 
 In the template, [`ProductCatalog`](https://github.com/agh-reactive/reactive-scala-labs-templates/blob/lab-5/src/main/scala/EShop/lab5/ProductCatalogApp.scala) has been implemented. An example of communication with `ProductCatalog` from a different `ActorSystem` using the [receptionist pattern](https://doc.akka.io/docs/akka/current/typed/actor-discovery.html#receptionist) with cluster setup is implemented in [ProductCatalogRemoteTest.scala](https://github.com/agh-reactive/reactive-scala-labs-templates/blob/lab-5/src/test/scala/EShop/lab5/ProductCatalogRemoteTest.scala). Product catalog has several responsibilities:
-* storing `Item`s, accordingly to lab4 convention (id as URI), and with number of items in the warehouse
+* storing `Item`s, in accordance with lab4 convention (id as URI), and with number of items in the warehouse
 * searching for items by keywords
     * Example of products: 
 
@@ -40,11 +40,11 @@ In the template, [`ProductCatalog`](https://github.com/agh-reactive/reactive-sca
     | Coke Classic Bottles |Coca-Cola |
 
     * Query example: `gerber cream` - brand name following the product name.
-    * As a result, 10 closest results are returned.
+    * As a result, 10 best matching results are returned.
     * Data is imported from `query_result.bz2` file committed into template resources (data is loaded into memory, so `ProductCatalog` is memory intensive).
 
 
-1. *(15 points)* Please create Rest API for `ProductCatalog` exposing search feature. Results should be returned as JSON. Run `ProductCatalog` on an actor system different than HTTP server (to demonstrate remote communication via the receptionist pattern). While implementing Akka HTTP server, please take a look at `HelloWorldAkkaHttpServer` example in templates.
+1. *(15 points)* Please create REST API for `ProductCatalog` exposing the search functionality. Results should be returned as JSON. Run `ProductCatalog` on an actor system different than the HTTP server (to demonstrate remote communication via the receptionist pattern). While implementing Akka HTTP server, please take a look at `HelloWorldAkkaHttpServer` example in templates.
 
 ![Product Catalog HTTP Server architecture](product_catalog_http.drawio.svg)
 
